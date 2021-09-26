@@ -66,17 +66,20 @@ func getLogLevel() zapcore.LevelEnabler {
 	}
 }
 
-func InitLogger() error {
+func InitLogger() (*zap.Logger, error) {
 	if err := createDirectoryIfNotExists(); err != nil {
-		return err
+		return nil, err
 	}
 	writerSync, err := getLogWriter(os.Getenv("APP_NAME"))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	encoder := getEncoder()
-	core := zapcore.NewCore(encoder, writerSync, getLogLevel())
+	core := zapcore.NewTee(
+		zapcore.NewCore(encoder, writerSync, getLogLevel()),
+		zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), getLogLevel()),
+	)
 	logger := zap.New(core, zap.AddCaller())
 	zap.ReplaceGlobals(logger)
-	return nil
+	return logger, nil
 }
