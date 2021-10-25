@@ -2,19 +2,32 @@ package util
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/sirupsen/logrus"
+	traceSdk "go.opentelemetry.io/otel/sdk/trace"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 )
 
 type Http struct {
-	Client         *http.Client
-	Logger         *logrus.Logger
-	DefaultHeaders map[string]string
+	client         *http.Client
+	logger         *logrus.Logger
+	defaultHeaders map[string]string
+	tracer         *traceSdk.TracerProvider
+}
+
+func NewHttp(client *http.Client, logger *logrus.Logger, defaultHeaders map[string]string, tracer *traceSdk.TracerProvider) *Http {
+	return &Http{
+		client:         client,
+		logger:         logger,
+		defaultHeaders: defaultHeaders,
+		tracer:         tracer,
+	}
 }
 
 func GetQueryParamsString(queryParams map[string]string) string {
@@ -74,11 +87,18 @@ func WithBody(bodyFactory func() []byte) ReqOption {
 	}
 }
 
+func WithCtx(context context.Context) ReqOption {
+	return func(r *http.Request) {
+		r.WithContext(context)
+	}
+}
+
 func (hul *Http) DoOperation(req *http.Request, factoryFunc Factory, reqOptions ...ReqOption) error {
 	for _, option := range reqOptions {
 		option(req)
 	}
-	resp, err := hul.Client.Do(req)
+	defer hul.recordSpan(req)
+	resp, err := hul.client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -110,7 +130,8 @@ func (hul *Http) DoGet(uri string, factoryFunc Factory, reqOptions ...ReqOption)
 	for _, option := range reqOptions {
 		option(req)
 	}
-	resp, err := hul.Client.Do(req)
+	defer hul.recordSpan(req)
+	resp, err := hul.client.Do(req)
 	defer resp.Body.Close()
 	if err != nil {
 		return err
@@ -123,10 +144,16 @@ func (hul *Http) DoPost(uri string, factoryFunc Factory, bodyFunc func() []byte,
 	for _, option := range reqOptions {
 		option(req)
 	}
-	res, err := hul.Client.Do(req)
+	defer hul.recordSpan(req)
+	res, err := hul.client.Do(req)
 	if err != nil {
 		return err
 	}
-
 	return hul.unmarshal(factoryFunc, res)
+}
+
+func (hul *Http) recordSpan(req *http.Request) {
+	tr := hul.tracer.Tracer(os.Getenv("APP_NAME"))
+	_, span := tr.Start(req.Context(), req.RequestURI)
+	defer span.End()
 }
