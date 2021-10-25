@@ -9,11 +9,11 @@ import (
 	"os"
 )
 
-// tracerProvider returns an OpenTelemetry TracerProvider configured to use
+// NewTracer returns an OpenTelemetry TracerProvider configured to use
 // the Jaeger exporter that will send spans to the provided url. The returned
 // TracerProvider will also use a Resource configured with all the information
 // about the application.
-func tracerProvider(url string) (*traceSdk.TracerProvider, error) {
+func NewTracer(url string) (*traceSdk.TracerProvider, error) {
 	// Create the Jaeger exporter
 	exp, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(url)))
 	if err != nil {
