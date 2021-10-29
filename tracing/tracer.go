@@ -15,7 +15,8 @@ import (
 // about the application.
 func NewTracer(url string) (*traceSdk.TracerProvider, error) {
 	// Create the Jaeger exporter
-	exp, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(url)))
+	// Use the agent injected as a sidecar strategy
+	exp, err := jaeger.New(jaeger.WithAgentEndpoint(jaeger.WithAgentHost("localhost")))
 	if err != nil {
 		return nil, err
 	}
