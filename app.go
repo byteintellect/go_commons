@@ -8,7 +8,7 @@ import (
 	"errors"
 	"github.com/byteintellect/go_commons/monitoring"
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	"io/ioutil"
@@ -236,16 +236,18 @@ func (a *BaseApp) RequestLoggerMiddleware(next http.Handler) http.Handler {
 
 func (a *BaseApp) RegisterHttpPrometheusMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		route := mux.CurrentRoute(request)
-		path, _ := route.GetPathTemplate()
-
-		timer := prometheus.NewTimer(monitoring.HttpDuration.WithLabelValues(path))
-		rw := NewResponseWriter(writer)
-		next.ServeHTTP(rw, request)
-		statusCode := rw.Status()
-		monitoring.HttpResponseStatusCode.WithLabelValues(strconv.Itoa(statusCode)).Inc()
-		monitoring.HttpTotalRequests.WithLabelValues(path).Inc()
-		timer.ObserveDuration()
+		methodName, found := runtime.RPCMethod(request.Context())
+		if found {
+			timer := prometheus.NewTimer(monitoring.HttpDuration.WithLabelValues(methodName))
+			rw := NewResponseWriter(writer)
+			next.ServeHTTP(rw, request)
+			statusCode := rw.Status()
+			monitoring.HttpResponseStatusCode.WithLabelValues(strconv.Itoa(statusCode)).Inc()
+			monitoring.HttpTotalRequests.WithLabelValues(methodName).Inc()
+			timer.ObserveDuration()
+		} else {
+			next.ServeHTTP(writer, request)
+		}
 	})
 }
 
