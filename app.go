@@ -6,12 +6,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/byteintellect/go_commons/monitoring"
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"runtime/debug"
+	"strconv"
 	"time"
 )
 
@@ -20,7 +24,7 @@ var (
 )
 
 // ResponseWriter is a wrapper around http.ResponseWriter that provides extra information about
-// the response. It is recommended that middleware handlers use this construct to wrap a responsewriter
+// the response. It is recommended that middleware handlers use this construct to wrap a response writer
 // if the functionality calls for it.
 type ResponseWriter interface {
 	http.ResponseWriter
@@ -219,6 +223,21 @@ func (a *BaseApp) RequestLoggerMiddleware(next http.Handler) http.Handler {
 		request.Body.Close() //  must close
 		request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 		next.ServeHTTP(writer, request)
+	})
+}
+
+func (a *BaseApp) RegisterHttpPrometheusMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		route := mux.CurrentRoute(request)
+		path, _ := route.GetPathTemplate()
+
+		timer := prometheus.NewTimer(monitoring.HttpDuration.WithLabelValues(path))
+		rw := NewResponseWriter(writer)
+		next.ServeHTTP(rw, request)
+		statusCode := rw.Status()
+		monitoring.HttpResponseStatusCode.WithLabelValues(strconv.Itoa(statusCode)).Inc()
+		monitoring.HttpTotalRequests.WithLabelValues(path).Inc()
+		timer.ObserveDuration()
 	})
 }
 
