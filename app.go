@@ -215,13 +215,21 @@ func (a *BaseApp) WriteResp(ctx context.Context, resp interface{}, status int, w
 	}
 }
 
+func (a *BaseApp) RequestWithBody(request *http.Request) bool {
+	return request.Method == http.MethodPost || request.Method == http.MethodPatch || request.Method == http.MethodPut
+}
+
 func (a *BaseApp) RequestLoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		// Enable this carefully, might cause a lot of problems if you log everything
-		bodyBytes, _ := ioutil.ReadAll(request.Body)
-		a.Logger.Info(request.Context().Value(requestIdCtxKey).(string), zap.String("payload", string(bodyBytes)))
-		request.Body.Close() //  must close
-		request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+		if a.RequestWithBody(request) {
+			bodyBytes, _ := ioutil.ReadAll(request.Body)
+			if len(bodyBytes) > 0 {
+				a.Logger.Info(request.Context().Value(requestIdCtxKey).(string), zap.String("payload", string(bodyBytes)))
+				request.Body.Close() //  must close
+				request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+			}
+		}
 		next.ServeHTTP(writer, request)
 	})
 }
