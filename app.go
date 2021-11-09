@@ -236,16 +236,15 @@ func (a *BaseApp) RequestLoggerMiddleware(next http.Handler) http.Handler {
 
 func (a *BaseApp) RegisterHttpPrometheusMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		metadata, found := runtime.ServerMetadataFromContext(request.Context())
+		path, found := runtime.HTTPPathPattern(request.Context())
 		if found {
-			httpPatterns := metadata.HeaderMD.Get("pattern")
-			if len(httpPatterns) > 0 {
-				timer := prometheus.NewTimer(monitoring.HttpDuration.WithLabelValues(httpPatterns[0]))
+			if len(path) > 0 {
+				timer := prometheus.NewTimer(monitoring.HttpDuration.WithLabelValues(path))
 				rw := NewResponseWriter(writer)
 				next.ServeHTTP(rw, request)
 				statusCode := rw.Status()
 				monitoring.HttpResponseStatusCode.WithLabelValues(strconv.Itoa(statusCode)).Inc()
-				monitoring.HttpTotalRequests.WithLabelValues(httpPatterns[0]).Inc()
+				monitoring.HttpTotalRequests.WithLabelValues(path).Inc()
 				timer.ObserveDuration()
 			}
 		} else {
