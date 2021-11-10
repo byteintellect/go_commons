@@ -9,7 +9,6 @@ import (
 	"github.com/byteintellect/go_commons/monitoring"
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	"io/ioutil"
 	"net"
@@ -236,20 +235,18 @@ func (a *BaseApp) RequestLoggerMiddleware(next http.Handler) http.Handler {
 
 func (a *BaseApp) RegisterHttpPrometheusMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		path, found := runtime.HTTPPathPattern(request.Context())
-		if found {
-			if len(path) > 0 {
-				timer := prometheus.NewTimer(monitoring.HttpDuration.WithLabelValues(path))
-				rw := NewResponseWriter(writer)
-				next.ServeHTTP(rw, request)
-				statusCode := rw.Status()
-				monitoring.HttpResponseStatusCode.WithLabelValues(strconv.Itoa(statusCode)).Inc()
-				monitoring.HttpTotalRequests.WithLabelValues(path).Inc()
-				timer.ObserveDuration()
+		rw := NewResponseWriter(writer)
+		defer func() {
+			path, found := runtime.HTTPPathPattern(request.Context())
+			if found {
+				if len(path) > 0 {
+					statusCode := rw.Status()
+					monitoring.HttpResponseStatusCode.WithLabelValues(strconv.Itoa(statusCode)).Inc()
+					monitoring.HttpTotalRequests.WithLabelValues(path).Inc()
+				}
 			}
-		} else {
-			next.ServeHTTP(writer, request)
-		}
+		}()
+		next.ServeHTTP(rw, request)
 	})
 }
 
