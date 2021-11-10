@@ -11,6 +11,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"go.uber.org/zap"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"runtime/debug"
@@ -237,6 +238,8 @@ func (a *BaseApp) RegisterHttpPrometheusMiddleware(next http.Handler) http.Handl
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		rw := NewResponseWriter(writer)
 		defer func() {
+			rpcMethod, found := runtime.RPCMethod(request.Context())
+			log.Println(rpcMethod)
 			path, found := runtime.HTTPPathPattern(request.Context())
 			if found {
 				if len(path) > 0 {
