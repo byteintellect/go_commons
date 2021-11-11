@@ -6,15 +6,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/byteintellect/go_commons/monitoring"
 	"github.com/google/uuid"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
-	status2 "google.golang.org/grpc/status"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -25,8 +22,9 @@ import (
 
 var (
 	requestIdCtxKey   = "X-CO-RELATION-ID"
-	httpPatternCtxKey = "pattern"
-	gRPCMethodCtxKey  = "method"
+	httpPatternCtxKey = "X-HTTP-PATH"
+	gRPCMethodCtxKey  = "X-GRPC-HANDLER-METHOD"
+	serviceName       = fmt.Sprintf("%v_%v", os.Getenv("APP_NAME"), os.Getenv("APP_ENV"))
 )
 
 // ResponseWriter is a wrapper around http.ResponseWriter that provides extra information about
@@ -240,24 +238,16 @@ func (a *BaseApp) RequestLoggerMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (a *BaseApp) RegisterHttpPrometheusMiddleware(next http.Handler) http.Handler {
+func (a *BaseApp) HandlerWithMetrics(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		rw := NewResponseWriter(writer)
 		defer func() {
-			md, found := metadata.FromIncomingContext(request.Context())
-			if found {
-				log.Println(md)
-			}
-			rpcMethod, found := runtime.RPCMethod(request.Context())
-			log.Println(rpcMethod)
-			path, found := runtime.HTTPPathPattern(request.Context())
-			if found {
-				if len(path) > 0 {
-					statusCode := rw.Status()
-					monitoring.HttpResponseStatusCode.WithLabelValues(strconv.Itoa(statusCode)).Inc()
-					monitoring.HttpTotalRequests.WithLabelValues(path).Inc()
-				}
-			}
+			reqPath := request.Header.Get(httpPatternCtxKey)
+			timer := prometheus.NewTimer(monitoring.HttpDuration.WithLabelValues(serviceName, reqPath, request.Method))
+			statusCode := rw.Status()
+			monitoring.HttpTotalRequests.WithLabelValues(serviceName, reqPath, request.Method, strconv.Itoa(statusCode)).Inc()
+			monitoring.HttpResponseStatusCode.WithLabelValues(serviceName, reqPath, request.Method).Inc()
+			timer.ObserveDuration()
 		}()
 		next.ServeHTTP(rw, request)
 	})
@@ -267,22 +257,5 @@ func NewBaseApp(logger *zap.Logger, appTokens []string) *BaseApp {
 	return &BaseApp{
 		Logger:    logger,
 		appTokens: appTokens,
-	}
-}
-
-func MetricsInterceptor() func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		resp, err := handler(ctx, req)
-		md, found := metadata.FromIncomingContext(ctx)
-		if found {
-			pattern := md.Get(httpPatternCtxKey)[0]
-			method := md.Get(gRPCMethodCtxKey)[0]
-			if status, ok := status2.FromError(err); ok {
-				monitoring.HttpTotalRequests.WithLabelValues(os.Getenv("APP_NAME")+os.Getenv("APP_ENV"), pattern, method, status.String()).Inc()
-			} else {
-				monitoring.HttpTotalRequests.WithLabelValues(os.Getenv("APP_NAME")+os.Getenv("APP_ENV"), pattern, method, "200").Inc()
-			}
-		}
-		return resp, err
 	}
 }

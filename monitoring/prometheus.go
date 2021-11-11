@@ -9,11 +9,6 @@ var HttpTotalRequests = prometheus.NewCounterVec(prometheus.CounterOpts{
 	Help: "number of http requests",
 }, []string{"service", "path", "method", "code"})
 
-var GRPCTotalRequests = prometheus.NewCounterVec(prometheus.CounterOpts{
-	Name: "grpc_requests_total",
-	Help: "number of gRPC requests",
-}, []string{"path"})
-
 var HttpResponseStatusCode = prometheus.NewCounterVec(prometheus.CounterOpts{
 	Name: "http_response_status_code",
 	Help: "http calls response status code",
@@ -24,18 +19,8 @@ var HttpDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 	Help: "response duration for http calls",
 }, []string{"service", "path", "method"})
 
-var GRPCDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
-	Name: "grpc_response_duration",
-	Help: "response duration for gRPC calls",
-}, []string{"path"})
-
 func InitHttp(registry *prometheus.Registry) {
 	registry.MustRegister(HttpTotalRequests)
 	registry.MustRegister(HttpResponseStatusCode)
 	registry.MustRegister(HttpDuration)
-}
-
-func InitGrpc(registry *prometheus.Registry) {
-	registry.MustRegister(GRPCTotalRequests)
-	registry.MustRegister(GRPCDuration)
 }
