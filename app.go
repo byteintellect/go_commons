@@ -11,6 +11,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	status2 "google.golang.org/grpc/status"
 	"io/ioutil"
 	"log"
@@ -266,6 +267,12 @@ func NewBaseApp(logger *zap.Logger, appTokens []string) *BaseApp {
 func MetricsInterceptor() func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		resp, err := handler(ctx, req)
+		md, found := metadata.FromIncomingContext(ctx)
+		if found {
+			for key, val := range md {
+				log.Println(key, val)
+			}
+		}
 		path, pathFound := runtime.HTTPPathPattern(ctx)
 		method, methodFound := runtime.RPCMethod(ctx)
 		if pathFound && methodFound {
