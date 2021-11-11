@@ -24,7 +24,9 @@ import (
 )
 
 var (
-	requestIdCtxKey = "X-CO-RELATION-ID"
+	requestIdCtxKey   = "X-CO-RELATION-ID"
+	httpPatternCtxKey = "pattern"
+	gRPCMethodCtxKey  = "method"
 )
 
 // ResponseWriter is a wrapper around http.ResponseWriter that provides extra information about
@@ -269,17 +271,12 @@ func MetricsInterceptor() func(ctx context.Context, req interface{}, info *grpc.
 		resp, err := handler(ctx, req)
 		md, found := metadata.FromIncomingContext(ctx)
 		if found {
-			for key, val := range md {
-				log.Println(key, val)
-			}
-		}
-		path, pathFound := runtime.HTTPPathPattern(ctx)
-		method, methodFound := runtime.RPCMethod(ctx)
-		if pathFound && methodFound {
+			pattern := md.Get(httpPatternCtxKey)[0]
+			method := md.Get(gRPCMethodCtxKey)[0]
 			if status, ok := status2.FromError(err); ok {
-				monitoring.HttpTotalRequests.WithLabelValues(os.Getenv("APP_NAME")+os.Getenv("APP_ENV"), path, method, status.String()).Inc()
+				monitoring.HttpTotalRequests.WithLabelValues(os.Getenv("APP_NAME")+os.Getenv("APP_ENV"), pattern, method, status.String()).Inc()
 			} else {
-				monitoring.HttpTotalRequests.WithLabelValues(os.Getenv("APP_NAME")+os.Getenv("APP_ENV"), path, method, "200").Inc()
+				monitoring.HttpTotalRequests.WithLabelValues(os.Getenv("APP_NAME")+os.Getenv("APP_ENV"), pattern, method, "200").Inc()
 			}
 		}
 		return resp, err
