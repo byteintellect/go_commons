@@ -7,7 +7,7 @@ import (
 var HttpTotalRequests = prometheus.NewCounterVec(prometheus.CounterOpts{
 	Name: "http_requests_total",
 	Help: "number of http requests",
-}, []string{"path"})
+}, []string{"service", "path", "method", "code"})
 
 var GRPCTotalRequests = prometheus.NewCounterVec(prometheus.CounterOpts{
 	Name: "grpc_requests_total",
@@ -17,12 +17,12 @@ var GRPCTotalRequests = prometheus.NewCounterVec(prometheus.CounterOpts{
 var HttpResponseStatusCode = prometheus.NewCounterVec(prometheus.CounterOpts{
 	Name: "http_response_status_code",
 	Help: "http calls response status code",
-}, []string{"status"})
+}, []string{"service", "path", "method"})
 
 var HttpDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 	Name: "http_response_duration",
 	Help: "response duration for http calls",
-}, []string{"path"})
+}, []string{"service", "path", "method"})
 
 var GRPCDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 	Name: "grpc_response_duration",

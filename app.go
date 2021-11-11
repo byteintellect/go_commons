@@ -10,10 +10,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	status2 "google.golang.org/grpc/status"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"runtime/debug"
 	"strconv"
 	"time"
@@ -257,5 +260,21 @@ func NewBaseApp(logger *zap.Logger, appTokens []string) *BaseApp {
 	return &BaseApp{
 		Logger:    logger,
 		appTokens: appTokens,
+	}
+}
+
+func MetricsInterceptor() func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		resp, err := handler(ctx, req)
+		path, pathFound := runtime.HTTPPathPattern(ctx)
+		method, methodFound := runtime.RPCMethod(ctx)
+		if pathFound && methodFound {
+			if status, ok := status2.FromError(err); ok {
+				monitoring.HttpTotalRequests.WithLabelValues(os.Getenv("APP_NAME")+os.Getenv("APP_ENV"), path, method, status.String()).Inc()
+			} else {
+				monitoring.HttpTotalRequests.WithLabelValues(os.Getenv("APP_NAME")+os.Getenv("APP_ENV"), path, method, "200").Inc()
+			}
+		}
+		return resp, err
 	}
 }
