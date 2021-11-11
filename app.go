@@ -244,6 +244,10 @@ func (a *BaseApp) RegisterHttpPrometheusMiddleware(next http.Handler) http.Handl
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		rw := NewResponseWriter(writer)
 		defer func() {
+			md, found := metadata.FromIncomingContext(request.Context())
+			if found {
+				log.Println(md)
+			}
 			rpcMethod, found := runtime.RPCMethod(request.Context())
 			log.Println(rpcMethod)
 			path, found := runtime.HTTPPathPattern(request.Context())
