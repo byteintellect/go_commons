@@ -25,6 +25,7 @@ var (
 	httpPatternCtxKey = "X-HTTP-PATH"
 	gRPCMethodCtxKey  = "X-GRPC-HANDLER-METHOD"
 	serviceName       = fmt.Sprintf("%v_%v", os.Getenv("APP_NAME"), os.Getenv("APP_ENV"))
+	metricsPath       = "/metrics"
 )
 
 // ResponseWriter is a wrapper around http.ResponseWriter that provides extra information about
@@ -243,11 +244,13 @@ func (a *BaseApp) HandlerWithMetrics(next http.Handler) http.Handler {
 		rw := NewResponseWriter(writer)
 		defer func() {
 			reqPath := request.Header.Get(httpPatternCtxKey)
-			timer := prometheus.NewTimer(monitoring.HttpDuration.WithLabelValues(serviceName, reqPath, request.Method))
-			statusCode := rw.Status()
-			monitoring.HttpTotalRequests.WithLabelValues(serviceName, reqPath, request.Method, strconv.Itoa(statusCode)).Inc()
-			monitoring.HttpResponseStatusCode.WithLabelValues(serviceName, reqPath, request.Method).Inc()
-			timer.ObserveDuration()
+			if reqPath != metricsPath || reqPath == "" {
+				timer := prometheus.NewTimer(monitoring.HttpDuration.WithLabelValues(serviceName, reqPath, request.Method))
+				statusCode := rw.Status()
+				monitoring.HttpTotalRequests.WithLabelValues(serviceName, reqPath, request.Method, strconv.Itoa(statusCode)).Inc()
+				monitoring.HttpResponseStatusCode.WithLabelValues(serviceName, reqPath, request.Method).Inc()
+				timer.ObserveDuration()
+			}
 		}()
 		next.ServeHTTP(rw, request)
 	})
