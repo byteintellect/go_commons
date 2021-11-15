@@ -244,7 +244,7 @@ func (a *BaseApp) HandlerWithMetrics(next http.Handler) http.Handler {
 		rw := NewResponseWriter(writer)
 		defer func() {
 			reqPath := request.Header.Get(httpPatternCtxKey)
-			if reqPath != metricsPath || reqPath == "" {
+			if reqPath != metricsPath || reqPath != "" {
 				timer := prometheus.NewTimer(monitoring.HttpDuration.WithLabelValues(serviceName, reqPath, request.Method))
 				statusCode := rw.Status()
 				monitoring.HttpTotalRequests.WithLabelValues(serviceName, reqPath, request.Method, strconv.Itoa(statusCode)).Inc()
