@@ -196,6 +196,10 @@ type BaseApp struct {
 	appTokens   []string
 }
 
+func (a *BaseApp) GrpcMetrics() *grpcPrometheus.ServerMetrics {
+	return a.grpcMetrics
+}
+
 func (a *BaseApp) Logger() *zap.Logger {
 	return a.logger
 }
