@@ -7,11 +7,27 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/byteintellect/go_commons/config"
+	db2 "github.com/byteintellect/go_commons/db"
+	"github.com/byteintellect/go_commons/logger"
 	"github.com/byteintellect/go_commons/monitoring"
+	"github.com/byteintellect/go_commons/tracing"
 	"github.com/google/uuid"
+	grpcPrometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/infobloxopen/atlas-app-toolkit/gateway"
+	"github.com/infobloxopen/atlas-app-toolkit/server"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	traceSdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"gorm.io/gorm"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -137,9 +153,70 @@ func (rw *responseWriterCloseNotifier) CloseNotify() <-chan bool {
 	return rw.ResponseWriter.(http.CloseNotifier).CloseNotify()
 }
 
+func GatewayOpts(cfg *config.BaseConfig, endPointFunc func(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error)) ([]gateway.Option, error) {
+	return []gateway.Option{
+		gateway.WithGatewayOptions(
+			runtime.WithMetadata(func(ctx context.Context, request *http.Request) metadata.MD {
+				md := make(map[string]string)
+				if method, ok := runtime.RPCMethod(ctx); ok {
+					md["method"] = method
+					request.Header.Add("x-grpc-handler-method", method)
+				}
+				if pattern, ok := runtime.HTTPPathPattern(ctx); ok {
+					md["pattern"] = pattern
+					request.Header.Add("x-http-path", pattern)
+				}
+				return metadata.New(md)
+			}),
+			runtime.WithForwardResponseOption(forwardResponseOption),
+			runtime.WithIncomingHeaderMatcher(gateway.AtlasDefaultHeaderMatcher()),
+			runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
+				MarshalOptions: protojson.MarshalOptions{
+					UseProtoNames:   true,
+					EmitUnpopulated: true,
+				},
+				UnmarshalOptions: protojson.UnmarshalOptions{
+					AllowPartial:   false,
+					DiscardUnknown: true,
+				},
+			}),
+		),
+		gateway.WithServerAddress(fmt.Sprintf("%s:%s", cfg.ServerConfig.Address, cfg.ServerConfig.Port)),
+		gateway.WithEndpointRegistration(cfg.GatewayConfig.Endpoint, endPointFunc),
+	}, nil
+}
+
 type BaseApp struct {
-	Logger    *zap.Logger
+	logger    *zap.Logger
+	registry  *prometheus.Registry
+	tracer    *traceSdk.TracerProvider
+	db        *gorm.DB
+	ctx       context.Context
 	appTokens []string
+}
+
+func (a *BaseApp) Logger() *zap.Logger {
+	return a.logger
+}
+
+func (a *BaseApp) Registry() *prometheus.Registry {
+	return a.registry
+}
+
+func (a *BaseApp) Tracer() *traceSdk.TracerProvider {
+	return a.tracer
+}
+
+func (a *BaseApp) Db() *gorm.DB {
+	return a.db
+}
+
+func (a *BaseApp) Ctx() context.Context {
+	return a.ctx
+}
+
+func (a *BaseApp) AppTokens() []string {
+	return a.appTokens
 }
 
 func (a *BaseApp) validAppToken(given string) bool {
@@ -168,7 +245,7 @@ func (a *BaseApp) LogMiddleware(next http.Handler) http.Handler {
 		defer func() {
 			if err := recover(); err != nil {
 				writer.WriteHeader(http.StatusInternalServerError)
-				a.Logger.Error("application error",
+				a.logger.Error("application error",
 					zap.Any("err", err),
 					zap.String("trace", string(debug.Stack())))
 			}
@@ -186,7 +263,7 @@ func (a *BaseApp) LogMiddleware(next http.Handler) http.Handler {
 			requestId = uuid.New().String()
 		}
 		newCtx := context.WithValue(request.Context(), requestIdCtxKey, requestId)
-		a.Logger.Info(requestId,
+		a.logger.Info(requestId,
 			zap.String("method", request.Method),
 			zap.Int("status", cfResponseWriter.Status()),
 			zap.String("uri", request.URL.EscapedPath()),
@@ -210,13 +287,13 @@ func (a *BaseApp) WriteResp(ctx context.Context, resp interface{}, status int, w
 		writer.WriteHeader(http.StatusInternalServerError)
 		_, err = writer.Write([]byte(defaultResp))
 		if err != nil {
-			a.Logger.Error(ctx.Value(requestIdCtxKey).(string), zap.String("response_to_json_serialization_err", err.Error()), zap.Error(err))
+			a.logger.Error(ctx.Value(requestIdCtxKey).(string), zap.String("response_to_json_serialization_err", err.Error()), zap.Error(err))
 		}
 	}
 	writer.WriteHeader(status)
 	_, err = writer.Write(respBytes.Bytes())
 	if err != nil {
-		a.Logger.Error(ctx.Value(requestIdCtxKey).(string), zap.String("response_writer_err", err.Error()), zap.Error(err))
+		a.logger.Error(ctx.Value(requestIdCtxKey).(string), zap.String("response_writer_err", err.Error()), zap.Error(err))
 	}
 }
 
@@ -230,7 +307,7 @@ func (a *BaseApp) RequestLoggerMiddleware(next http.Handler) http.Handler {
 		if a.RequestWithBody(request) {
 			bodyBytes, _ := ioutil.ReadAll(request.Body)
 			if len(bodyBytes) > 0 {
-				a.Logger.Info(request.Context().Value(requestIdCtxKey).(string), zap.String("payload", string(bodyBytes)))
+				a.logger.Info(request.Context().Value(requestIdCtxKey).(string), zap.String("payload", string(bodyBytes)))
 				request.Body.Close() //  must close
 				request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 			}
@@ -256,9 +333,100 @@ func (a *BaseApp) HandlerWithMetrics(next http.Handler) http.Handler {
 	})
 }
 
-func NewBaseApp(logger *zap.Logger, appTokens []string) *BaseApp {
-	return &BaseApp{
-		Logger:    logger,
-		appTokens: appTokens,
+func getDbDSN(cfg *config.BaseConfig) string {
+	dCfg := cfg.DatabaseConfig
+	return fmt.Sprintf("%v:%v@(%v:%v)/%v?parseTime=true",
+		dCfg.UserName, dCfg.Password, dCfg.HostName, dCfg.Port, dCfg.DatabaseName)
+}
+
+func NewBaseApp(cfg *config.BaseConfig) (*BaseApp, error) {
+
+	// Initialize Logger
+	zapLogger, err := logger.InitLogger()
+	if err != nil {
+		log.Println("failed to initialize logger")
+		return nil, err
 	}
+	promRegistry := prometheus.NewRegistry()
+	grpcMetrics := grpcPrometheus.NewServerMetrics()
+	promRegistry.MustRegister(grpcMetrics)
+
+	// Initialize Trace Provider connection
+	traceProvider, err := tracing.NewTracer(cfg.TraceProviderUrl)
+	if err != nil {
+		zapLogger.Error("failed to initialize app due to trace provider", zap.Error(err))
+		return nil, err
+	}
+
+	// Initialize context
+	ctx := context.Background()
+
+	db, err := db2.NewGormDbConn(getDbDSN(cfg), traceProvider)
+	if err != nil {
+		zapLogger.Error("failed to initialize app due to db connection", zap.Error(err))
+		return nil, err
+	}
+
+	return &BaseApp{
+		logger:    zapLogger,
+		appTokens: cfg.AppTokens,
+		ctx:       ctx,
+		db:        db,
+		tracer:    traceProvider,
+		registry:  promRegistry,
+	}, nil
+}
+
+func forwardResponseOption(ctx context.Context, w http.ResponseWriter, resp protoreflect.ProtoMessage) error {
+	w.Header().Set("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate")
+	return nil
+}
+
+func ServeExternal(cfg *config.BaseConfig, app *BaseApp, serverFunc func (app *BaseApp) *grpc.Server, endPointFunc func(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error)) error{
+	grpcServer := serverFunc(app)
+	gatewayOpts, err := GatewayOpts(cfg, endPointFunc)
+	if err != nil {
+		return err
+	}
+	s, err := server.NewServer(
+		server.WithGrpcServer(grpcServer),
+		server.WithGateway(gatewayOpts...),
+		// this endpoint will be used for our health checks
+		server.WithHandler("/user_svc/ping", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(200)
+			w.Write([]byte("pong"))
+		})),
+		server.WithHandler("/user_svc/ready", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rawDb, err := app.db.DB()
+			if err != nil || rawDb.Ping() != nil {
+				w.WriteHeader(http.StatusBadGateway)
+			}
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("{\"status\": \"ok\"}"))
+		})),
+		// register middlewares
+		server.WithMiddlewares(app.LogMiddleware, app.RequestLoggerMiddleware, app.CommonMiddleware),
+		// register metrics
+		server.WithHandler("/metrics", promhttp.HandlerFor(app.registry, promhttp.HandlerOpts{Registry: app.Registry()})),
+	)
+	if err != nil {
+		return err
+	}
+
+	// wrap handler
+	monitoring.InitHttp(app.registry)
+	s.HTTPServer.Handler = app.HandlerWithMetrics(s.HTTPServer.Handler)
+
+	grpcL, err := net.Listen("tcp", fmt.Sprintf("%s:%s", cfg.ServerConfig.Address, cfg.ServerConfig.Port))
+	if err != nil {
+		app.logger.Fatal("Error starting gRPC listener for clients", zap.Error(err))
+	}
+
+	httpL, err := net.Listen("tcp", fmt.Sprintf("%s:%s", cfg.GatewayConfig.Address, cfg.GatewayConfig.Port))
+	if err != nil {
+		app.logger.Fatal("Error starting http listener for client", zap.Error(err))
+	}
+	app.logger.Info("serving gRPC ", zap.String("address", cfg.ServerConfig.Address), zap.String("port", cfg.ServerConfig.Port))
+	app.logger.Info("serving http", zap.String("address", cfg.GatewayConfig.Address), zap.String("port", cfg.GatewayConfig.Port))
+	return s.Serve(grpcL, httpL)
 }
