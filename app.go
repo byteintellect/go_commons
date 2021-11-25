@@ -388,8 +388,7 @@ func forwardResponseOption(ctx context.Context, w http.ResponseWriter, resp prot
 	return nil
 }
 
-func ServeExternal(cfg *config.BaseConfig, app *BaseApp, serverFunc func(app *BaseApp) *grpc.Server, endPointFunc func(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error)) error {
-	grpcServer := serverFunc(app)
+func ServeExternal(cfg *config.BaseConfig, app *BaseApp, grpcServer *grpc.Server, endPointFunc func(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error)) error {
 	gatewayOpts, err := GatewayOpts(cfg, endPointFunc)
 	if err != nil {
 		return err
