@@ -1,10 +1,12 @@
 package event
 
-import "github.com/byteintellect/go_commons"
+import (
+	"github.com/byteintellect/go_commons/entity"
+)
 
 type Publisher interface {
-	Publish(event go_commons.Event)
-	PublishAsync(event go_commons.Event)
+	Publish(event entity.Event)
+	PublishAsync(event entity.Event)
 	Flush()
 	Close()
 }

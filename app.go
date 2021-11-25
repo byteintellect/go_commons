@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/byteintellect/go_commons/config"
-	db2 "github.com/byteintellect/go_commons/db"
+	"github.com/byteintellect/go_commons/db"
 	"github.com/byteintellect/go_commons/logger"
 	"github.com/byteintellect/go_commons/monitoring"
 	"github.com/byteintellect/go_commons/tracing"
@@ -361,7 +361,7 @@ func NewBaseApp(cfg *config.BaseConfig) (*BaseApp, error) {
 	// Initialize context
 	ctx := context.Background()
 
-	db, err := db2.NewGormDbConn(getDbDSN(cfg), traceProvider)
+	database, err := db.NewGormDbConn(getDbDSN(cfg), traceProvider)
 	if err != nil {
 		zapLogger.Error("failed to initialize app due to db connection", zap.Error(err))
 		return nil, err
@@ -371,7 +371,7 @@ func NewBaseApp(cfg *config.BaseConfig) (*BaseApp, error) {
 		logger:    zapLogger,
 		appTokens: cfg.AppTokens,
 		ctx:       ctx,
-		db:        db,
+		db:        database,
 		tracer:    traceProvider,
 		registry:  promRegistry,
 	}, nil

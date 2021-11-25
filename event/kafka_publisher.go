@@ -2,7 +2,7 @@ package event
 
 import (
 	"fmt"
-	"github.com/byteintellect/go_commons"
+	"github.com/byteintellect/go_commons/entity"
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 	"log"
 	"sync"
@@ -37,7 +37,7 @@ func NewKafkaProducer(channels []string, config map[string]string) *KafkaPublish
 	return &KafkaPublisher{done: done, eventChannels: channels, wg: &wg, producer: producer}
 }
 
-func (kP *KafkaPublisher) Publish(event go_commons.Event) {
+func (kP *KafkaPublisher) Publish(event entity.Event) {
 	log.Println("Calling publish")
 	kP.wg.Add(1)
 	go func() {
@@ -53,7 +53,7 @@ func (kP *KafkaPublisher) Publish(event go_commons.Event) {
 
 }
 
-func (kP *KafkaPublisher) PublishAsync(event go_commons.Event) {
+func (kP *KafkaPublisher) PublishAsync(event entity.Event) {
 	eventBytes := event.ToBytes()
 	entityType := event.GetEntityType()
 	kP.producer.ProduceChannel() <- &kafka.Message{

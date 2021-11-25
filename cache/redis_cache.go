@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"github.com/byteintellect/go_commons"
+	"github.com/byteintellect/go_commons/entity"
 	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
 	"time"
@@ -10,15 +10,15 @@ import (
 type RedisCache struct {
 	*redis.Client
 	logger        *logrus.Logger
-	entityCreator go_commons.EntityCreator
+	entityCreator entity.EntityCreator
 }
 
-func (r *RedisCache) Put(base go_commons.Base) error {
+func (r *RedisCache) Put(base entity.Base) error {
 	cmd := r.Client.Set(base.GetExternalId(), base, 0)
 	return cmd.Err()
 }
 
-func (r *RedisCache) Get(externalId string) (go_commons.Base, error) {
+func (r *RedisCache) Get(externalId string) (entity.Base, error) {
 	cmd := r.Client.Get(externalId)
 	if cmd.Err() != nil {
 		return nil, cmd.Err()
@@ -31,8 +31,8 @@ func (r *RedisCache) Get(externalId string) (go_commons.Base, error) {
 	return entity, nil
 }
 
-func (r *RedisCache) MultiGet(externalIds []string) ([]go_commons.Base, error) {
-	var result []go_commons.Base
+func (r *RedisCache) MultiGet(externalIds []string) ([]entity.Base, error) {
+	var result []entity.Base
 	for _, externalId := range externalIds {
 		base, err := r.Get(externalId)
 		if err != nil {
@@ -59,7 +59,7 @@ func (r *RedisCache) MultiDelete(externalIds []string) error {
 	return nil
 }
 
-func (r *RedisCache) PutWithTtl(base go_commons.Base, duration time.Duration) error {
+func (r *RedisCache) PutWithTtl(base entity.Base, duration time.Duration) error {
 	statusCmd := r.Client.Set(base.GetExternalId(), base, duration)
 	if statusCmd.Err() != nil {
 		return statusCmd.Err()
@@ -84,7 +84,7 @@ func (r *RedisCache) Health() error {
 	return nil
 }
 
-func NewRedisCache(addr string, password string, db uint, logger *logrus.Logger, entityCreator go_commons.EntityCreator) BaseCache {
+func NewRedisCache(addr string, password string, db uint, logger *logrus.Logger, entityCreator entity.EntityCreator) BaseCache {
 	client := redis.NewClient(
 		&redis.Options{
 			Addr:     addr,

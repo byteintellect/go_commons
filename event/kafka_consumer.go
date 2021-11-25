@@ -2,7 +2,7 @@ package event
 
 import (
 	"fmt"
-	"github.com/byteintellect/go_commons"
+	"github.com/byteintellect/go_commons/entity"
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 	"log"
 	"os"
@@ -11,7 +11,7 @@ import (
 	"syscall"
 )
 
-type EventConsumer func(event go_commons.Event)
+type EventConsumer func(event entity.Event)
 
 type KafkaConsumer struct {
 	done             chan bool
@@ -19,7 +19,7 @@ type KafkaConsumer struct {
 	consumerMapping  map[string]EventConsumer
 	sigChan          chan os.Signal
 	channels         []string
-	eventConstructor func() go_commons.Event
+	eventConstructor func() entity.Event
 }
 
 func getKafkaConsumerConfigMap(config map[string]interface{}) *kafka.ConfigMap {
@@ -47,7 +47,7 @@ func NewKafkaConsumer(channels []string, config map[string]interface{}, consumer
 	return &KafkaConsumer{channels: channels, sigChan: sigChan, done: done, consumer: consumer, consumerMapping: consumerMapping}
 }
 
-func (kc *KafkaConsumer) getEvent(eventData []byte) go_commons.Event {
+func (kc *KafkaConsumer) getEvent(eventData []byte) entity.Event {
 	event := kc.eventConstructor()
 	event.FromByte(eventData)
 	return event
@@ -75,7 +75,7 @@ func (kc *KafkaConsumer) Consume(wg *sync.WaitGroup) {
 				case *kafka.Message:
 					domainEvent := kc.getEvent(e.Value)
 					wg.Add(1)
-					go func(event go_commons.Event) {
+					go func(event entity.Event) {
 						defer wg.Done()
 						if eventConsumer := kc.consumerMapping[domainEvent.GetEntityType()]; eventConsumer != nil {
 							eventConsumer(domainEvent)

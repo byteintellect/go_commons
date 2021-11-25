@@ -1,4 +1,4 @@
-package go_commons
+package entity
 
 import (
 	"database/sql"
