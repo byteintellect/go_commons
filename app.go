@@ -187,12 +187,13 @@ func GatewayOpts(cfg *config.BaseConfig, endPointFunc func(ctx context.Context, 
 }
 
 type BaseApp struct {
-	logger    *zap.Logger
-	registry  *prometheus.Registry
-	tracer    *traceSdk.TracerProvider
-	db        *gorm.DB
-	ctx       context.Context
-	appTokens []string
+	logger      *zap.Logger
+	registry    *prometheus.Registry
+	tracer      *traceSdk.TracerProvider
+	db          *gorm.DB
+	ctx         context.Context
+	grpcMetrics *grpcPrometheus.ServerMetrics
+	appTokens   []string
 }
 
 func (a *BaseApp) Logger() *zap.Logger {
@@ -368,12 +369,13 @@ func NewBaseApp(cfg *config.BaseConfig) (*BaseApp, error) {
 	}
 
 	return &BaseApp{
-		logger:    zapLogger,
-		appTokens: cfg.AppTokens,
-		ctx:       ctx,
-		db:        database,
-		tracer:    traceProvider,
-		registry:  promRegistry,
+		logger:      zapLogger,
+		appTokens:   cfg.AppTokens,
+		ctx:         ctx,
+		db:          database,
+		tracer:      traceProvider,
+		registry:    promRegistry,
+		grpcMetrics: grpcMetrics,
 	}, nil
 }
 
@@ -382,7 +384,7 @@ func forwardResponseOption(ctx context.Context, w http.ResponseWriter, resp prot
 	return nil
 }
 
-func ServeExternal(cfg *config.BaseConfig, app *BaseApp, serverFunc func (app *BaseApp) *grpc.Server, endPointFunc func(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error)) error{
+func ServeExternal(cfg *config.BaseConfig, app *BaseApp, serverFunc func(app *BaseApp) *grpc.Server, endPointFunc func(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error)) error {
 	grpcServer := serverFunc(app)
 	gatewayOpts, err := GatewayOpts(cfg, endPointFunc)
 	if err != nil {
