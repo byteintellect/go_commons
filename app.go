@@ -397,11 +397,11 @@ func ServeExternal(cfg *config.BaseConfig, app *BaseApp, grpcServer *grpc.Server
 		server.WithGrpcServer(grpcServer),
 		server.WithGateway(gatewayOpts...),
 		// this endpoint will be used for our health checks
-		server.WithHandler("/user_svc/ping", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server.WithHandler(fmt.Sprintf("/%v/ping", os.Getenv("APP_NAME")), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
 			w.Write([]byte("pong"))
 		})),
-		server.WithHandler("/user_svc/ready", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server.WithHandler(fmt.Sprintf("/%v/ready", os.Getenv("APP_NAME")), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			rawDb, err := app.db.DB()
 			if err != nil || rawDb.Ping() != nil {
 				w.WriteHeader(http.StatusBadGateway)
@@ -412,7 +412,7 @@ func ServeExternal(cfg *config.BaseConfig, app *BaseApp, grpcServer *grpc.Server
 		// register middlewares
 		server.WithMiddlewares(app.LogMiddleware, app.RequestLoggerMiddleware, app.CommonMiddleware),
 		// register metrics
-		server.WithHandler("/metrics", promhttp.HandlerFor(app.registry, promhttp.HandlerOpts{Registry: app.Registry()})),
+		server.WithHandler(fmt.Sprintf("/%v/metrics", os.Getenv("APP_NAME")), promhttp.HandlerFor(app.registry, promhttp.HandlerOpts{Registry: app.Registry()})),
 	)
 	if err != nil {
 		return err
