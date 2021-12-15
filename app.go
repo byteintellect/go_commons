@@ -385,6 +385,24 @@ func NewBaseApp(cfg *config.BaseConfig) (*BaseApp, error) {
 
 func forwardResponseOption(ctx context.Context, w http.ResponseWriter, resp protoreflect.ProtoMessage) error {
 	w.Header().Set("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate")
+	md, ok := runtime.ServerMetadataFromContext(ctx)
+	if !ok {
+		return nil
+	}
+
+	// set http status code
+	if vals := md.HeaderMD.Get("x-http-code"); len(vals) > 0 {
+		code, err := strconv.Atoi(vals[0])
+		if err != nil {
+			return err
+		}
+		// delete the headers to not expose any grpc-metadata in http response
+		delete(md.HeaderMD, "x-http-code")
+		delete(w.Header(), "Grpc-Metadata-X-Http-Code")
+		w.WriteHeader(code)
+	}
+
+	return nil
 	return nil
 }
 
@@ -402,8 +420,7 @@ func ServeExternal(cfg *config.BaseConfig, app *BaseApp, grpcServer *grpc.Server
 			w.Write([]byte("pong"))
 		})),
 		server.WithHandler(fmt.Sprintf("/%v/ready", os.Getenv("APP_NAME")), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			rawDb, err := app.db.DB()
-			if err != nil || rawDb.Ping() != nil {
+			if err := app.db.Raw("SELECT 1").Error; err != nil {
 				w.WriteHeader(http.StatusBadGateway)
 			}
 			w.WriteHeader(http.StatusOK)
