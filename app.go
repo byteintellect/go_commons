@@ -401,8 +401,6 @@ func forwardResponseOption(ctx context.Context, w http.ResponseWriter, resp prot
 		delete(w.Header(), "Grpc-Metadata-X-Http-Code")
 		w.WriteHeader(code)
 	}
-
-	return nil
 	return nil
 }
 
