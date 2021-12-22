@@ -325,9 +325,9 @@ func (a *BaseApp) RequestLoggerMiddleware(next http.Handler) http.Handler {
 func (a *BaseApp) HandlerWithMetrics(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		rw := NewResponseWriter(writer)
-		reqPath := request.Header.Get(httpPatternCtxKey)
 		start := time.Now()
 		defer func() {
+			reqPath := request.Header.Get(httpPatternCtxKey)
 			if reqPath != metricsPath && reqPath != "" {
 				statusCode := rw.Status()
 				monitoring.HttpTotalRequests.WithLabelValues(serviceName, reqPath, request.Method, strconv.Itoa(statusCode)).Inc()
