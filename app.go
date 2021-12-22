@@ -18,6 +18,7 @@ import (
 	"github.com/infobloxopen/atlas-app-toolkit/gateway"
 	"github.com/infobloxopen/atlas-app-toolkit/server"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	traceSdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
@@ -325,13 +326,14 @@ func (a *BaseApp) HandlerWithMetrics(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		rw := NewResponseWriter(writer)
 		reqPath := request.Header.Get(httpPatternCtxKey)
-		timer := prometheus.NewTimer(monitoring.HttpDuration.WithLabelValues(serviceName, reqPath, request.Method))
+		start := time.Now()
 		defer func() {
 			if reqPath != metricsPath && reqPath != "" {
 				statusCode := rw.Status()
 				monitoring.HttpTotalRequests.WithLabelValues(serviceName, reqPath, request.Method, strconv.Itoa(statusCode)).Inc()
 				monitoring.HttpResponseStatusCode.WithLabelValues(serviceName, reqPath, request.Method).Inc()
-				timer.ObserveDuration()
+				end := time.Now()
+				monitoring.HttpDuration.WithLabelValues(serviceName, reqPath, request.Method).Observe(end.Sub(start).Seconds())
 			}
 		}()
 		next.ServeHTTP(rw, request)
@@ -355,6 +357,7 @@ func NewBaseApp(cfg *config.BaseConfig) (*BaseApp, error) {
 	promRegistry := prometheus.NewRegistry()
 	grpcMetrics := grpcPrometheus.NewServerMetrics()
 	promRegistry.MustRegister(grpcMetrics)
+	promRegistry.Register(collectors.NewGoCollector())
 
 	// Initialize Trace Provider connection
 	traceProvider, err := tracing.NewTracer(cfg.TraceProviderUrl)
