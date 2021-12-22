@@ -324,10 +324,10 @@ func (a *BaseApp) RequestLoggerMiddleware(next http.Handler) http.Handler {
 func (a *BaseApp) HandlerWithMetrics(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		rw := NewResponseWriter(writer)
+		reqPath := request.Header.Get(httpPatternCtxKey)
+		timer := prometheus.NewTimer(monitoring.HttpDuration.WithLabelValues(serviceName, reqPath, request.Method))
 		defer func() {
-			reqPath := request.Header.Get(httpPatternCtxKey)
 			if reqPath != metricsPath && reqPath != "" {
-				timer := prometheus.NewTimer(monitoring.HttpDuration.WithLabelValues(serviceName, reqPath, request.Method))
 				statusCode := rw.Status()
 				monitoring.HttpTotalRequests.WithLabelValues(serviceName, reqPath, request.Method, strconv.Itoa(statusCode)).Inc()
 				monitoring.HttpResponseStatusCode.WithLabelValues(serviceName, reqPath, request.Method).Inc()
