@@ -5,17 +5,18 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
+	"github.com/byteintellect/protos_go/users/v1"
 	"github.com/dgrijalva/jwt-go"
 	"io"
 	"time"
 )
 
 type Claims struct {
-	UserId string `json:"user_id"`
 	jwt.StandardClaims
+	usersv1.UserDto
 }
 
-func GenerateAccessRefreshKeyPair(accessTokenDuration, refreshTokenDuration string, secretKey string, userId string) (map[string]string, error) {
+func GenerateAccessRefreshKeyPair(accessTokenDuration, refreshTokenDuration string, secretKey string, dto usersv1.UserDto) (map[string]string, error) {
 	accessTokenExp, err := time.ParseDuration(accessTokenDuration)
 	if err != nil {
 		return nil, err
@@ -24,11 +25,11 @@ func GenerateAccessRefreshKeyPair(accessTokenDuration, refreshTokenDuration stri
 	if err != nil {
 		return nil, err
 	}
-	accessToken, err := createToken(userId, secretKey, time.Now().Add(accessTokenExp))
+	accessToken, err := createToken(dto, secretKey, time.Now().Add(accessTokenExp))
 	if err != nil {
 		return nil, err
 	}
-	refreshToken, err := createToken(userId, secretKey, time.Now().Add(refreshTokenExp))
+	refreshToken, err := createToken(dto, secretKey, time.Now().Add(refreshTokenExp))
 	if err != nil {
 		return nil, err
 	}
@@ -38,10 +39,10 @@ func GenerateAccessRefreshKeyPair(accessTokenDuration, refreshTokenDuration stri
 	}, nil
 }
 
-func createToken(userId, secretKey string, expirationTime time.Time) (string, error) {
+func createToken(dto usersv1.UserDto, secretKey string, expirationTime time.Time) (string, error) {
 	var err error
 	claims := &Claims{
-		UserId: userId,
+		UserDto: dto,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
 		},
@@ -81,4 +82,3 @@ func EncryptAES(cipherKey, text string) (string, error) {
 	cfb.XORKeyStream(ciphertext[aes.BlockSize:], []byte(b))
 	return text, nil
 }
-
