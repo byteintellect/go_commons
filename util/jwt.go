@@ -25,11 +25,11 @@ func GenerateAccessRefreshKeyPair(accessTokenDuration, refreshTokenDuration stri
 	if err != nil {
 		return nil, err
 	}
-	accessToken, err := createToken(dto, secretKey, time.Now().Add(accessTokenExp))
+	accessToken, err := CreateToken(dto, secretKey, time.Now().Add(accessTokenExp))
 	if err != nil {
 		return nil, err
 	}
-	refreshToken, err := createToken(dto, secretKey, time.Now().Add(refreshTokenExp))
+	refreshToken, err := CreateToken(dto, secretKey, time.Now().Add(refreshTokenExp))
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func GenerateAccessRefreshKeyPair(accessTokenDuration, refreshTokenDuration stri
 	}, nil
 }
 
-func createToken(dto usersv1.UserDto, secretKey string, expirationTime time.Time) (string, error) {
+func CreateToken(dto usersv1.UserDto, secretKey string, expirationTime time.Time) (string, error) {
 	var err error
 	claims := &Claims{
 		UserDto: dto,
