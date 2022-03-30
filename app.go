@@ -356,8 +356,7 @@ func NewBaseApp(cfg *config.BaseConfig) (*BaseApp, error) {
 	}
 	promRegistry := prometheus.NewRegistry()
 	grpcMetrics := grpcPrometheus.NewServerMetrics()
-	promRegistry.MustRegister(grpcMetrics)
-	promRegistry.Register(collectors.NewGoCollector())
+	promRegistry.MustRegister(grpcMetrics, collectors.NewGoCollector())
 
 	// Initialize Trace Provider connection
 	traceProvider, err := tracing.NewTracer(cfg.TraceProviderUrl)
@@ -369,7 +368,7 @@ func NewBaseApp(cfg *config.BaseConfig) (*BaseApp, error) {
 	// Initialize context
 	ctx := context.Background()
 
-	database, err := db.NewGormDbConn(cfg.GatewayConfig.Port, cfg.DatabaseConfig.DatabaseName, getDbDSN(cfg), traceProvider)
+	database, err := db.NewGormDbConn(cfg.DatabaseConfig.GormMetricsPort, cfg.DatabaseConfig.DatabaseName, getDbDSN(cfg), traceProvider)
 	if err != nil {
 		zapLogger.Error("failed to initialize app due to db connection", zap.Error(err))
 		return nil, err

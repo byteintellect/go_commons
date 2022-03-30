@@ -27,19 +27,20 @@ type ServerConfig struct {
 type GatewayConfig struct {
 	Enabled     bool   `yaml:"enabled" json:"enabled"`
 	Address     string `yaml:"gateway_address" json:"gateway_address"`
-	Port        uint32    `yaml:"port" json:"port"`
+	Port        uint32 `yaml:"port" json:"port"`
 	Url         string `yaml:"url" json:"url"`
 	SwaggerFile string `yaml:"swagger_file" json:"swagger_file"`
 	Endpoint    string `yaml:"endpoint" json:"endpoint"`
 }
 
 type DatabaseConfig struct {
-	Type         string `yaml:"type" json:"type"`
-	HostName     string `yaml:"host_name" json:"host_name"`
-	Port         string `yaml:"port" json:"port"`
-	UserName     string `yaml:"user_name" json:"user_name"`
-	DatabaseName string `yaml:"database_name" json:"database_name"`
-	Password     string `yaml:"password" json:"password" envconfig:"DATABASE_PASSWORD"`
+	Type            string `yaml:"type" json:"type"`
+	HostName        string `yaml:"host_name" json:"host_name"`
+	Port            string `yaml:"port" json:"port"`
+	UserName        string `yaml:"user_name" json:"user_name"`
+	DatabaseName    string `yaml:"database_name" json:"database_name"`
+	Password        string `yaml:"password" json:"password" envconfig:"DATABASE_PASSWORD"`
+	GormMetricsPort uint32 `yaml:"gorm_metrics_port" json:"gorm_metrics_port"`
 }
 
 func ReadFile(filePath string, cfg interface{}) error {

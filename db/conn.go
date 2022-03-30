@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func NewGormDbConn(httpServerPort uint32, dbName, dsn string, traceProvider *traceSdk.TracerProvider) (*gorm.DB, error) {
+func NewGormDbConn(metricsPort uint32, dbName, dsn string, traceProvider *traceSdk.TracerProvider) (*gorm.DB, error) {
 	dbLogger := gLogger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
 		gLogger.Config{
@@ -30,8 +30,8 @@ func NewGormDbConn(httpServerPort uint32, dbName, dsn string, traceProvider *tra
 
 	promPlugin := gProm.New(gProm.Config{
 		DBName:         dbName,
-		HTTPServerPort: httpServerPort,
-		StartServer:    false,
+		StartServer:    true,
+		HTTPServerPort: metricsPort,
 		MetricsCollector: []gProm.MetricsCollector{
 			&gProm.MySQL{
 				VariableNames: []string{"threads_running"},
