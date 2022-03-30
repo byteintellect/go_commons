@@ -22,6 +22,7 @@ type ServerConfig struct {
 	Port             string `yaml:"port" json:"port"`
 	KeepAliveTime    uint   `yaml:"keep_alive_time" json:"keep_alive_time"`
 	KeepAliveTimeOut uint   `yaml:"keep_alive_time_out" json:"keep_alive_time_out"`
+	MetricsPort      uint32 `yaml:"metrics_port" json:"metrics_port"`
 }
 
 type GatewayConfig struct {
@@ -34,13 +35,12 @@ type GatewayConfig struct {
 }
 
 type DatabaseConfig struct {
-	Type            string `yaml:"type" json:"type"`
-	HostName        string `yaml:"host_name" json:"host_name"`
-	Port            string `yaml:"port" json:"port"`
-	UserName        string `yaml:"user_name" json:"user_name"`
-	DatabaseName    string `yaml:"database_name" json:"database_name"`
-	Password        string `yaml:"password" json:"password" envconfig:"DATABASE_PASSWORD"`
-	GormMetricsPort uint32 `yaml:"gorm_metrics_port" json:"gorm_metrics_port"`
+	Type         string `yaml:"type" json:"type"`
+	HostName     string `yaml:"host_name" json:"host_name"`
+	Port         string `yaml:"port" json:"port"`
+	UserName     string `yaml:"user_name" json:"user_name"`
+	DatabaseName string `yaml:"database_name" json:"database_name"`
+	Password     string `yaml:"password" json:"password" envconfig:"DATABASE_PASSWORD"`
 }
 
 func ReadFile(filePath string, cfg interface{}) error {
