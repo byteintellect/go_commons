@@ -19,8 +19,8 @@ var HttpDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 	Help: "response duration for http calls",
 }, []string{"service", "path", "method"})
 
-func InitHttp(registry *prometheus.Registry) {
-	registry.MustRegister(HttpTotalRequests)
-	registry.MustRegister(HttpResponseStatusCode)
-	registry.MustRegister(HttpDuration)
+func InitHttp() {
+	prometheus.DefaultRegisterer.MustRegister(HttpTotalRequests)
+	prometheus.DefaultRegisterer.MustRegister(HttpResponseStatusCode)
+	prometheus.DefaultRegisterer.MustRegister(HttpDuration)
 }

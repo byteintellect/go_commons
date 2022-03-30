@@ -189,7 +189,6 @@ func GatewayOpts(cfg *config.BaseConfig, endPointFunc func(ctx context.Context, 
 
 type BaseApp struct {
 	logger      *zap.Logger
-	registry    *prometheus.Registry
 	tracer      *traceSdk.TracerProvider
 	db          *gorm.DB
 	ctx         context.Context
@@ -203,10 +202,6 @@ func (a *BaseApp) GrpcMetrics() *grpcPrometheus.ServerMetrics {
 
 func (a *BaseApp) Logger() *zap.Logger {
 	return a.logger
-}
-
-func (a *BaseApp) Registry() *prometheus.Registry {
-	return a.registry
 }
 
 func (a *BaseApp) Tracer() *traceSdk.TracerProvider {
@@ -428,14 +423,14 @@ func ServeExternal(cfg *config.BaseConfig, app *BaseApp, grpcServer *grpc.Server
 		// register middlewares
 		server.WithMiddlewares(app.LogMiddleware, app.RequestLoggerMiddleware, app.CommonMiddleware),
 		// register metrics
-		server.WithHandler(fmt.Sprintf("/%v/metrics", os.Getenv("APP_NAME")), promhttp.HandlerFor(app.registry, promhttp.HandlerOpts{Registry: app.Registry()})),
+		server.WithHandler(fmt.Sprintf("/%v/metrics", os.Getenv("APP_NAME")), promhttp.Handler()),
 	)
 	if err != nil {
 		return err
 	}
 
 	// wrap handler
-	monitoring.InitHttp(app.registry)
+	monitoring.InitHttp()
 	s.HTTPServer.Handler = app.HandlerWithMetrics(s.HTTPServer.Handler)
 
 	grpcL, err := net.Listen("tcp", fmt.Sprintf("%s:%s", cfg.ServerConfig.Address, cfg.ServerConfig.Port))
