@@ -19,7 +19,6 @@ import (
 	"github.com/infobloxopen/atlas-app-toolkit/server"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	traceSdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -422,8 +421,6 @@ func ServeExternal(cfg *config.BaseConfig, app *BaseApp, grpcServer *grpc.Server
 		})),
 		// register middlewares
 		server.WithMiddlewares(app.LogMiddleware, app.RequestLoggerMiddleware, app.CommonMiddleware),
-		// register metrics
-		server.WithHandler(fmt.Sprintf("/%v/metrics", os.Getenv("APP_NAME")), promhttp.Handler()),
 	)
 	if err != nil {
 		return err
