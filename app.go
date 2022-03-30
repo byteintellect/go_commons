@@ -13,12 +13,10 @@ import (
 	"github.com/byteintellect/go_commons/monitoring"
 	"github.com/byteintellect/go_commons/tracing"
 	"github.com/google/uuid"
-	grpcPrometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/infobloxopen/atlas-app-toolkit/gateway"
 	"github.com/infobloxopen/atlas-app-toolkit/server"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	traceSdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
@@ -188,17 +186,12 @@ func GatewayOpts(cfg *config.BaseConfig, endPointFunc func(ctx context.Context, 
 }
 
 type BaseApp struct {
-	logger      *zap.Logger
-	registry    *prometheus.Registry
-	tracer      *traceSdk.TracerProvider
-	db          *gorm.DB
-	ctx         context.Context
-	grpcMetrics *grpcPrometheus.ServerMetrics
-	appTokens   []string
-}
-
-func (a *BaseApp) GrpcMetrics() *grpcPrometheus.ServerMetrics {
-	return a.grpcMetrics
+	logger    *zap.Logger
+	registry  *prometheus.Registry
+	tracer    *traceSdk.TracerProvider
+	db        *gorm.DB
+	ctx       context.Context
+	appTokens []string
 }
 
 func (a *BaseApp) Logger() *zap.Logger {
@@ -354,8 +347,6 @@ func NewBaseApp(cfg *config.BaseConfig) (*BaseApp, error) {
 		log.Println("failed to initialize logger")
 		return nil, err
 	}
-	grpcMetrics := grpcPrometheus.NewServerMetrics()
-	prometheus.DefaultRegisterer.MustRegister(grpcMetrics, collectors.NewGoCollector())
 
 	// Initialize Trace Provider connection
 	traceProvider, err := tracing.NewTracer(cfg.TraceProviderUrl)
@@ -374,12 +365,11 @@ func NewBaseApp(cfg *config.BaseConfig) (*BaseApp, error) {
 	}
 
 	return &BaseApp{
-		logger:      zapLogger,
-		appTokens:   cfg.AppTokens,
-		ctx:         ctx,
-		db:          database,
-		tracer:      traceProvider,
-		grpcMetrics: grpcMetrics,
+		logger:    zapLogger,
+		appTokens: cfg.AppTokens,
+		ctx:       ctx,
+		db:        database,
+		tracer:    traceProvider,
 	}, nil
 }
 
