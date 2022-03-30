@@ -31,7 +31,7 @@ func NewGormDbConn(httpServerPort uint32, dbName, dsn string, traceProvider *tra
 	promPlugin := gProm.New(gProm.Config{
 		DBName:         dbName,
 		HTTPServerPort: httpServerPort,
-		StartServer:    true,
+		StartServer:    false,
 		MetricsCollector: []gProm.MetricsCollector{
 			&gProm.MySQL{
 				VariableNames: []string{"threads_running"},
