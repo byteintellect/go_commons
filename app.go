@@ -369,7 +369,7 @@ func NewBaseApp(cfg *config.BaseConfig) (*BaseApp, error) {
 	// Initialize context
 	ctx := context.Background()
 
-	database, err := db.NewGormDbConn(getDbDSN(cfg), traceProvider)
+	database, err := db.NewGormDbConn(cfg.GatewayConfig.Port, cfg.DatabaseConfig.DatabaseName, getDbDSN(cfg), traceProvider)
 	if err != nil {
 		zapLogger.Error("failed to initialize app due to db connection", zap.Error(err))
 		return nil, err
@@ -450,6 +450,6 @@ func ServeExternal(cfg *config.BaseConfig, app *BaseApp, grpcServer *grpc.Server
 		app.logger.Fatal("Error starting http listener for client", zap.Error(err))
 	}
 	app.logger.Info("serving gRPC ", zap.String("address", cfg.ServerConfig.Address), zap.String("port", cfg.ServerConfig.Port))
-	app.logger.Info("serving http", zap.String("address", cfg.GatewayConfig.Address), zap.String("port", cfg.GatewayConfig.Port))
+	app.logger.Info("serving http", zap.String("address", cfg.GatewayConfig.Address), zap.Uint32("port", cfg.GatewayConfig.Port))
 	return s.Serve(grpcL, httpL)
 }

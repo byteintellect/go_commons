@@ -27,7 +27,7 @@ type ServerConfig struct {
 type GatewayConfig struct {
 	Enabled     bool   `yaml:"enabled" json:"enabled"`
 	Address     string `yaml:"gateway_address" json:"gateway_address"`
-	Port        string `yaml:"port" json:"port"`
+	Port        uint32    `yaml:"port" json:"port"`
 	Url         string `yaml:"url" json:"url"`
 	SwaggerFile string `yaml:"swagger_file" json:"swagger_file"`
 	Endpoint    string `yaml:"endpoint" json:"endpoint"`

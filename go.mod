@@ -16,7 +16,7 @@ require (
 	github.com/infobloxopen/atlas-app-toolkit v1.1.2
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/onsi/gomega v1.14.0 // indirect
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.12.1
 	github.com/sirupsen/logrus v1.8.1
 	go.opentelemetry.io/otel v1.0.1
 	go.opentelemetry.io/otel/exporters/jaeger v1.0.1
@@ -24,7 +24,6 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.18.1
-	golang.org/x/sys v0.0.0-20211023085530-d6a326fbbf70 // indirect
 	golang.org/x/tools v0.1.5 // indirect
 	google.golang.org/genproto v0.0.0-20220112215332-a9c7c0acf9f2 // indirect
 	google.golang.org/grpc v1.43.0
@@ -33,5 +32,6 @@ require (
 	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.7.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	gorm.io/driver/mysql v1.1.1
-	gorm.io/gorm v1.21.12
+	gorm.io/gorm v1.23.1
+	gorm.io/plugin/prometheus v0.0.0-20220223061010-d8bdd50fdfc7
 )
