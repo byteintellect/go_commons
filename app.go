@@ -354,9 +354,8 @@ func NewBaseApp(cfg *config.BaseConfig) (*BaseApp, error) {
 		log.Println("failed to initialize logger")
 		return nil, err
 	}
-	promRegistry := prometheus.NewRegistry()
 	grpcMetrics := grpcPrometheus.NewServerMetrics()
-	promRegistry.MustRegister(grpcMetrics, collectors.NewGoCollector())
+	prometheus.DefaultRegisterer.MustRegister(grpcMetrics, collectors.NewGoCollector())
 
 	// Initialize Trace Provider connection
 	traceProvider, err := tracing.NewTracer(cfg.TraceProviderUrl)
@@ -380,7 +379,6 @@ func NewBaseApp(cfg *config.BaseConfig) (*BaseApp, error) {
 		ctx:         ctx,
 		db:          database,
 		tracer:      traceProvider,
-		registry:    promRegistry,
 		grpcMetrics: grpcMetrics,
 	}, nil
 }
