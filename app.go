@@ -445,7 +445,7 @@ func ServeExternal(cfg *config.BaseConfig, app *BaseApp, grpcServer *grpc.Server
 		app.logger.Fatal("Error starting gRPC listener for clients", zap.Error(err))
 	}
 
-	httpL, err := net.Listen("tcp", fmt.Sprintf("%s:%s", cfg.GatewayConfig.Address, cfg.GatewayConfig.Port))
+	httpL, err := net.Listen("tcp", fmt.Sprintf("%s:%v", cfg.GatewayConfig.Address, cfg.GatewayConfig.Port))
 	if err != nil {
 		app.logger.Fatal("Error starting http listener for client", zap.Error(err))
 	}
