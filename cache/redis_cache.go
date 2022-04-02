@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/byteintellect/go_commons/entity"
 	"github.com/go-redis/redis/extra/redisotel/v8"
 	"github.com/go-redis/redis/v8"
@@ -27,7 +28,8 @@ func (r *RedisCache) Get(ctx context.Context, externalId string) (entity.Base, e
 		return nil, cmd.Err()
 	}
 	entity := r.entityCreator()
-	err := cmd.Scan(&entity)
+	strValue := cmd.Val()
+	err := json.Unmarshal([]byte(strValue), &entity)
 	if err != nil {
 		return nil, err
 	}
