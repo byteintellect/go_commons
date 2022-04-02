@@ -5,14 +5,14 @@ import (
 	"github.com/byteintellect/go_commons/entity"
 	"github.com/go-redis/redis/extra/redisotel/v8"
 	"github.com/go-redis/redis/v8"
-	"github.com/sirupsen/logrus"
 	traceSdk "go.opentelemetry.io/otel/sdk/trace"
+	"go.uber.org/zap"
 	"time"
 )
 
 type RedisCache struct {
 	*redis.Client
-	logger        *logrus.Logger
+	logger        *zap.Logger
 	entityCreator entity.EntityCreator
 }
 
@@ -83,7 +83,7 @@ func (r *RedisCache) Health(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	r.logger.Infof("Health check ping response <%v>", pong)
+	r.logger.Info("Health check ping response <%v>", zap.String("response", pong))
 	return nil
 }
 
@@ -91,7 +91,7 @@ func NewRedisCache(
 	addr string,
 	password string,
 	db uint,
-	logger *logrus.Logger,
+	logger *zap.Logger,
 	entityCreator entity.EntityCreator,
 	provider *traceSdk.TracerProvider) BaseCache {
 	client := redis.NewClient(
