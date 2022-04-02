@@ -170,6 +170,14 @@ func (bd BaseDomain) String() string {
 	return bdString
 }
 
+func (bd BaseDomain) MarshalBinary() ([]byte, error) {
+	return json.Marshal(bd)
+}
+
+func (bd BaseDomain) UnmarshalBinary(buffer []byte) error {
+	return json.Unmarshal(buffer, bd)
+}
+
 // BeforeCreate will be called by gorm
 func (bd BaseDomain) BeforeCreate(tx *gorm.DB) error {
 	if bd.ExternalId == "" {
@@ -177,6 +185,7 @@ func (bd BaseDomain) BeforeCreate(tx *gorm.DB) error {
 	}
 	return nil
 }
+
 //
 // BeforeUpdate will be called by gorm
 func (bd BaseDomain) BeforeUpdate(tx *gorm.DB) error {
