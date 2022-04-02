@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/byteintellect/go_commons/entity"
+	"github.com/go-redis/redis/extra/redisotel/v8"
 	"github.com/go-redis/redis/v8"
 	traceSdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
@@ -101,7 +102,7 @@ func NewRedisCache(
 			Password: password,
 			DB:       int(db),
 		})
-	//client.AddHook(redisotel.NewTracingHook(redisotel.WithTracerProvider(provider)))
+	client.AddHook(redisotel.NewTracingHook(redisotel.WithTracerProvider(provider)))
 	return &RedisCache{
 		client,
 		logger,
