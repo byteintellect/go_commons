@@ -8,19 +8,19 @@ require (
 	github.com/confluentinc/confluent-kafka-go v1.7.0 // indirect
 	github.com/dgrijalva/jwt-go v3.2.1-0.20200107013213-dc14462fd587+incompatible
 	github.com/elastic/go-elasticsearch/v7 v7.13.1
-	github.com/go-redis/redis v6.15.9+incompatible
+	github.com/go-redis/redis/extra/redisotel/v8 v8.11.5
+	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gobeam/stringy v0.0.4
 	github.com/google/uuid v1.3.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.2
 	github.com/infobloxopen/atlas-app-toolkit v1.1.2
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/onsi/gomega v1.14.0 // indirect
 	github.com/prometheus/client_golang v1.12.1
 	github.com/sirupsen/logrus v1.8.1
-	go.opentelemetry.io/otel v1.0.1
+	go.opentelemetry.io/otel v1.5.0
 	go.opentelemetry.io/otel/exporters/jaeger v1.0.1
-	go.opentelemetry.io/otel/sdk v1.0.1
+	go.opentelemetry.io/otel/sdk v1.4.1
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.18.1
