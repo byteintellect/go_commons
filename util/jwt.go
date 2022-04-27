@@ -16,7 +16,7 @@ type Claims struct {
 	usersv1.UserDto
 }
 
-func GenerateAccessRefreshKeyPair(accessTokenDuration, refreshTokenDuration string, secretKey string, dto usersv1.UserDto) (map[string]string, error) {
+func GenerateAccessRefreshKeyPair(accessTokenDuration, refreshTokenDuration string, secretKey string, dto *usersv1.UserDto) (map[string]string, error) {
 	accessTokenExp, err := time.ParseDuration(accessTokenDuration)
 	if err != nil {
 		return nil, err
@@ -39,10 +39,10 @@ func GenerateAccessRefreshKeyPair(accessTokenDuration, refreshTokenDuration stri
 	}, nil
 }
 
-func CreateToken(dto usersv1.UserDto, secretKey string, expirationTime time.Time) (string, error) {
+func CreateToken(dto *usersv1.UserDto, secretKey string, expirationTime time.Time) (string, error) {
 	var err error
 	claims := &Claims{
-		UserDto: dto,
+		UserDto: *dto,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
 		},
