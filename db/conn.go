@@ -39,9 +39,20 @@ func NewGormDbConn(metricsPort uint32, dbName, dsn string, traceProvider *traceS
 		},
 	})
 	// create new mysql database connection
-	if db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{Logger: dbLogger}); err == nil {
+	if db, err := gorm.Open(
+		mysql.Open(dsn),
+		&gorm.Config{
+			Logger: dbLogger,
+		}); err == nil {
 		db.Use(plugin)
 		db.Use(promPlugin)
+		rDb, err := db.DB()
+		if err != nil {
+			return nil, err
+		}
+		rDb.SetMaxOpenConns(100)
+		rDb.SetMaxIdleConns(100)
+		rDb.SetConnMaxIdleTime(time.Hour)
 		return db, nil
 	} else {
 		return nil, err
