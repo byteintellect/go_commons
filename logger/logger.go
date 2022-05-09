@@ -37,7 +37,7 @@ func getEncoderConfig() zapcore.EncoderConfig {
 	encoderConfig.EncodeTime = zapcore.TimeEncoder(func(t time.Time, encoder zapcore.PrimitiveArrayEncoder) {
 		encoder.AppendString(t.UTC().Format(time.RFC3339))
 	})
-	encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
 	return encoderConfig
 }
 
