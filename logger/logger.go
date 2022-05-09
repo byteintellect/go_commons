@@ -32,13 +32,13 @@ func getLogWriter(appName string) (zapcore.WriteSyncer, error) {
 	return zapcore.AddSync(logFile), nil
 }
 
-func getEncoder() zapcore.Encoder {
+func getEncoderConfig() zapcore.EncoderConfig {
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.TimeEncoder(func(t time.Time, encoder zapcore.PrimitiveArrayEncoder) {
 		encoder.AppendString(t.UTC().Format(time.RFC3339))
 	})
 	encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	return zapcore.NewConsoleEncoder(encoderConfig)
+	return encoderConfig
 }
 
 func getLogLevel() zapcore.LevelEnabler {
@@ -74,7 +74,8 @@ func InitLogger() (*zap.Logger, error) {
 	if err != nil {
 		return nil, err
 	}
-	encoder := getEncoder()
+	encoderCfg := getEncoderConfig()
+	encoder := zapcore.NewJSONEncoder(encoderCfg)
 	core := zapcore.NewTee(
 		zapcore.NewCore(encoder, writerSync, getLogLevel()),
 		zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), getLogLevel()),
